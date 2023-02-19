@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Text-to-Speech Converter</title>
+    <link rel="stylesheet" href="static\fonts\fontawesome-free-6.3.0-web\css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}"/>
+</head>
+<body>
+<p id="main-title">Text-to-Speech Converter</p>
+<form id="article-form">
+  <div class="buttons-container">
+  <label for="article-url">Article URL:</label>
+  <input type="url" id="article-url" name="article-url" required>
+  <button type="submit">Convert to Audio</button>
+  <button type="button" id="cancel-btn" onclick="cancelConversion()">Cancel</button>
+  </div>
+</form>
+
+<div id="loading-icon"></div>
+<audio id="player" controls>
+  <source src="data:audio/mp3;base64,{{ audio_data }}" type="audio/mp3">
+</audio>
+<div class="media-control-container">
+<button class="media-control" onclick="document.getElementById('player').currentTime -= 10;"><i class="fas fa-backward"></i>    Rewind</button>
+<button class="media-control" onclick="document.getElementById('player').currentTime += 10;">Fast Forward    <i class="fas fa-forward"></i></button>
+</div>
+<script>
+const form = document.getElementById('article-form');
+
+// Create a new div element to hold the loading icon
+const loadingIcon = document.createElement("div");
+loadingIcon.id = "loading-icon";
+loadingIcon.innerHTML = '<div></div>';
+document.body.appendChild(loadingIcon);
+
+form.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const articleUrl = document.getElementById('article-url').value;
+
+  // show the loading icon
+  loadingIcon.style.display = "block";
+
+  const audioData = await convertArticleToAudio(articleUrl);
+
+  // hide the loading icon once the player is ready to play
+  loadingIcon.style.display = "none";
+
+  playAudio(audioData);
+});
+
+const cancelButton = document.getElementById('cancel-btn');
+cancelButton.addEventListener('click', cancelConversion);
+
+function cancelConversion() {
+  // hide the loading icon
+  loadingIcon.style.display = "none";
+
+  // Abort the fetch request
+  controller.abort();
+
+  // Reset the form
+  form.reset();
+
+  // Hide the cancel button
+  cancelBtn.style.display = "none";
+}
+
+async function convertArticleToAudio(articleUrl) {
+  const controller = new AbortController();
+  const signal = controller.signal;
+
+  // show the loading icon and the cancel button
+  loadingIcon.style.display = "block";
+  cancelButton.style.display = "block";
+
+  const response = await fetch('/convert-to-audio', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ articleUrl }),
+    signal: signal
+  }).catch(error => {
+    console.log('Fetch request aborted', error);
+  });
+
+  if (!response) {
+    // hide the loading icon and show the cancel button
+    loadingIcon.style.display = "none";
+    cancelButton.style.display = "block";
+    return;
+  }
+
+  const { audioData } = await response.json();
+
+  // hide the loading icon and the cancel button
+  loadingIcon.style.display = "none";
+  cancelButton.style.display = "none";
+
+  return audioData;
+}
+
+function playAudio(audioData) {
+  // Decode the Base64-encoded audio data into a Uint8Array
+  var bytes = atob(audioData);
+  var array = new Uint8Array(bytes.length);
+  for (var i = 0; i < bytes.length; i++) {
+    array[i] = bytes.charCodeAt(i);
+  }
+
+  // Create a new Blob object from the audio data
+  var blob = new Blob([array], {type: 'audio/mpeg'});
+
+  // Set the source of the audio player to the URL of the blob
+  var player = document.getElementById('player');
+  player.src = URL.createObjectURL(blob);
+
+  // Play the audio
+  player.play();
+
+  // Add event listeners for when audio is paused or ended
+  player.addEventListener('pause', function() {
+    console.log('Audio paused');
+  });
+  player.addEventListener('ended', function() {
+    console.log('Audio ended');
+  });
+}
+</script>
+
+</body>
+</html>
