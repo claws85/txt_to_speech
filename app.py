@@ -31,5 +31,5 @@ def convert_to_audio():
     return jsonify({'audioData': audio_base64})
 
 
-if __name__ == '__main__':
-    app.run(debug=True)
+#if __name__ == '__main__':
+#    app.run(debug=True)

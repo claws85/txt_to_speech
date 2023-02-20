@@ -13,5 +13,5 @@ RUN pip install -r requirements.txt
 # Expose the port on which the app will run
 EXPOSE 5000
 
-# Define the entry point for the container
-CMD ["flask", "run", "--host=0.0.0.0"]
+# Start the Gunicorn server
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
